@@ -13,7 +13,7 @@ Python 3.6.x
 You need the modules matplotlib and numpy.
 
 ```
-pip install atplotlib
+pip install matplotlib
 ```
 
 ## Assignment 1.1: LLM
