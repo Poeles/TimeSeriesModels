@@ -71,7 +71,7 @@ class LocalLevel:
             a[t+1] = a[t] + self.k[t]*v[t]
             P[t+1] = self.k[t]*self.vareps + vareta
 
-        return a[1:] ,P[1:]
+        return a[1:], P[1:]
 
     def a_to_c(self):
         sims = len(self.vareta)
@@ -151,7 +151,7 @@ class LocalLevel:
             a[t+1] = a[t] + self.k[t]*v[t]
             P[t+1] = self.k[t]*self.vareps + vareta
 
-        return a[1:] ,P[1:]
+        return a[1:], P[1:]
 
     def e(self):
         vareta = 0.1
