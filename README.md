@@ -31,4 +31,5 @@ python 12.py
 ```
 
 The program will ask for a value to be picked. Make sure the value to be 1 if LLM.
+
 NB: Reproduces the figures 2.1 to 2.3
