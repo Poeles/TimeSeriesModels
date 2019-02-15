@@ -73,7 +73,7 @@ class LocalLevel:
 
         return a[1:], P[1:]
 
-    def a_to_c(self):
+    def a_to_d(self):
         sims = len(self.vareta)
 
         y = np.zeros((sims, self.n))
@@ -205,7 +205,7 @@ class LocalLevel:
 def main():
     localLevel = LocalLevel()
 
-    localLevel.a_to_c()
+    localLevel.a_to_d()
     localLevel.e()
     plt.show()
 

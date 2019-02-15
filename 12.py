@@ -5,7 +5,6 @@ Plots figure 2.1 to 2.3
 import numpy as np
 import math
 import matplotlib.pyplot as plt
-import scipy.stats as st
 
 class Nile:
     def __init__(self):
