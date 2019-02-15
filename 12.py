@@ -82,20 +82,20 @@ class Nile:
     def DisturbanceSmoother(self):
         self.mu = np.zeros(self.n)
         self.epshat = np.zeros(self.n)
-        self.varepshatgiveny = np.zeros(self.n)
+        self.stdepshatgiveny = np.zeros(self.n)
         self.D = np.zeros(self.n)
         self.etahat = np.zeros(self.n)
-        self.varetagiveny = np.zeros(self.n)
+        self.stdetagiveny = np.zeros(self.n)
 
         for t in range(self.n):
             self.mu[t] = self.v[t]/self.f[t] - self.k[t] * self.r[t]
             self.epshat[t] = self.vareps * self.mu[t]
 
             self.D[t] = 1/self.f[t] + (self.k[t]**2) * self.N[t]
-            self.varepshatgiveny[t] = self.vareps - (self.vareps**2) * self.D[t]
+            self.stdepshatgiveny[t] = np.sqrt(self.vareps - (self.vareps**2) * self.D[t])
 
             self.etahat[t] = self.vareta * self.r[t]
-            self.varetagiveny[t] = self.vareta - (self.vareta**2) * self.N[t]
+            self.stdetagiveny[t] = np.sqrt(self.vareta - (self.vareta**2) * self.N[t])
 
     def fig1(self):
         """ 2.1.i """
@@ -201,10 +201,10 @@ class Nile:
 
         """ 2.3.ii """
         plt.figure()
-        plt.plot(self.x, self.varepshatgiveny, color="blue", linewidth=0.5)
+        plt.plot(self.x, self.stdepshatgiveny, color="blue", linewidth=0.5)
         plt.xticks(np.arange(10), self.xYears)
         plt.xlabel(r'$t$',fontsize=16)
-        plt.title('Observation error variance ' + r'$Var(\epsilon_t | y)$',fontsize=12)
+        plt.title('Observation error standard error ' + r'$\sqrt{Var(\epsilon_t | y)}$',fontsize=12)
         plt.draw()
 
         """ 2.3.iii """
@@ -218,10 +218,10 @@ class Nile:
 
         """ 2.3.iv """
         plt.figure()
-        plt.plot(self.x, self.varetagiveny, color="blue", linewidth=0.5)
+        plt.plot(self.x, self.stdetagiveny, color="blue", linewidth=0.5)
         plt.xticks(np.arange(10), self.xYears)
         plt.xlabel(r'$t$',fontsize=16)
-        plt.title('State error variance ' + r'$Var(\eta_t | y)$',fontsize=12)
+        plt.title('State error standard error ' + r'$\sqrt{Var(\eta_t | y)}$',fontsize=12)
         plt.draw()
 
 def main():
