@@ -54,9 +54,9 @@ class Nile:
         for t in range(self.n):
             self.v[t] = self.y[t] - self.a[t]
             self.f[t] = self.P[t] + self.vareps
-            self.k[t] = self.P[t]/self.f[t]
-            self.a[t+1] = self.a[t] + self.k[t]*self.v[t]
-            self.P[t+1] = self.k[t]*self.vareps + self.vareta
+            self.k[t] = self.T * self.P[t]/self.f[t]
+            self.a[t+1] = self.T*self.a[t] + self.k[t]*self.v[t]
+            self.P[t+1] = (self.T**2) * self.P[t] + self.vareta - (self.k[t]**2) * self.f[t]
 
         self.a = self.a[1:]
         self.P = self.P[1:]
@@ -137,11 +137,10 @@ class Nile:
         """ 2.1.iv """
         plt.figure()
         plt.axhline(y=0, color='k', linewidth=0.5)
-        plt.ylim(bottom=20000, top=32500)
         plt.plot(self.x, self.f, color="blue", linewidth=0.5)
         plt.xticks(np.arange(10), self.xYears)
         plt.xlabel(r'$t$',fontsize=16)
-        plt.title('Prediction errors ' + r'$F_t$',fontsize=12)
+        plt.title('Prediction variance ' + r'$F_t$',fontsize=12)
         plt.draw()
 
     def fig2(self):
