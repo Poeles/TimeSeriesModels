@@ -30,6 +30,12 @@ class Nile:
             self.P1 = 10 ** 7
         elif abs(self.T < 1):
             self.P1 = self.vareta/(1 - self.T**2)
+
+            meanY = np.mean(self.y)
+
+            for i in range(self.n):
+                self.y[i] = self.y[i] - meanY
+                
         else:
             raise ValueError("The phi you've picked is not within the feasible range!")
 
