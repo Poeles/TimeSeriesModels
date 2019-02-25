@@ -5,6 +5,10 @@ Plots figure 2.1 to 2.3
 import numpy as np
 import math
 import matplotlib.pyplot as plt
+import statsmodels
+import statsmodels.api as sm
+import pylab
+from scipy.stats import gaussian_kde
 from copy import copy
 
 class Nile:
@@ -237,6 +241,9 @@ class Nile:
         plt.title('State error standard error ' + r'$\sqrt{Var(\eta_t | y)}$',fontsize=12)
         plt.draw()
 
+    def fig4(self):
+        continue
+
     def treatAsMissing(self):
         for i in range(20, 40):
             self.y[i] = int(self.y[i])
@@ -303,8 +310,8 @@ class Nile:
         self.n = len(self.y)
 
         # relabel for the x-axis
-        self.xYears = ["", 1890, 1910, 1930, 1950, 1970, 1990, 2010]
-        self.x = np.linspace(0,8,self.n)
+        self.xYears = [1870, 1880, 1890, 1900, 1910, 1920, 1930, 1940, 1950, 1960, 1970, 1980, 1990, 2000]
+        self.x = np.linspace(0,14,self.n)
 
 
     def fig6(self):
@@ -320,7 +327,7 @@ class Nile:
         plt.plot(self.x, self.y, color="grey", label='Nile data', linewidth=1, alpha=0.3)
         plt.plot(self.x, lowerboundCI, color="red", label='50% Confidence Interval', linewidth=0.5, linestyle="dashed")
         plt.plot(self.x, upperboundCI, color="red", linewidth=0.5, linestyle="dashed")
-        plt.xticks(np.arange(8), self.xYears)
+        plt.xticks(np.arange(14), self.xYears)
         plt.legend(loc='upper right')
         plt.xlabel(r'$t$',fontsize=16)
         plt.title('State forecast' + r'$\alpha_t$ ' + 'and its 50% confidence intervals',fontsize=12)
@@ -329,7 +336,7 @@ class Nile:
         """ 2.6.ii """
         plt.figure()
         plt.plot(self.x, self.P[1:], color="blue", linewidth=0.5)
-        plt.xticks(np.arange(8), self.xYears)
+        plt.xticks(np.arange(14), self.xYears)
         plt.xlabel(r'$t$',fontsize=16)
         plt.title('State variance ' + r'$P_t$',fontsize=12)
         plt.draw()
@@ -337,24 +344,110 @@ class Nile:
         """ 2.6.iii """
         plt.figure()
         plt.plot(self.x, self.a[1:], color="blue", label=r'$\alpha_t$', linewidth=0.5)
-        plt.xticks(np.arange(8), self.xYears)
+        plt.xticks(np.arange(14), self.xYears)
         plt.xlabel(r'$t$',fontsize=16)
-        plt.title('Observation forecast' + r'$E(y_t | Y_{t-1})$ ',fontsize=12)
+        plt.title('Observation forecast ' + r'$E(y_t | Y_{t-1})$ ',fontsize=12)
         plt.draw()
 
         """ 2.6.iv """
+        self.f = self.P[1:] + self.vareps
         plt.figure()
         plt.axhline(y=0, color='k', linewidth=0.5)
-        plt.ylim(bottom=20000, top=96000)
         plt.plot(self.x, self.f, color="blue", linewidth=0.5)
-        plt.xticks(np.arange(8), self.xYears)
+        plt.xticks(np.arange(14), self.xYears)
         plt.xlabel(r'$t$',fontsize=16)
         plt.title('Observation forecast variance ' + r'$F_t$',fontsize=12)
         plt.draw()
 
+    def standardResidual(self):
+        self.e = np.zeros(self.n)
+
+        for t in range(self.n):
+            self.e[t] = self.v[t]/np.sqrt(self.f[t])
+
+    def fig7(self):
+        """ 2.7.i """
+        plt.figure()
+        plt.plot(self.x, self.e, color="blue", linewidth=0.5)
+        plt.axhline(y=0, color='k', linewidth=0.5)
+        plt.xticks(np.arange(14), self.xYears)
+        plt.xlabel(r'$t$',fontsize=16)
+        plt.title('Standardised residual ' + r'$e_t$',fontsize=12)
+        plt.draw()
+
+        """ 2.7.ii """
+        plt.figure()
+        plt.hist(self.e, 13, density=True, rwidth=0.85)
+        density = gaussian_kde(self.e)
+        xs = np.linspace(-4,4,100)
+        plt.plot(xs,density(xs))
+        plt.title('Histogram and estimated density for ' + r'$e_t$',fontsize=12)
+        plt.draw()
+
+        """ 2.7.iii """
+        sm.qqplot(self.e, line='45')
+        plt.axhline(y=0, color='k', linewidth=0.5)
+        plt.title('QQ-plot',fontsize=12)
+        plt.draw()
+
+        """ 2.7.iv """
+        statsmodels.graphics.tsaplots.plot_acf(self.e, lags=17)
+        plt.draw()
+
+    def mustar(self):
+        self.mustar = np.zeros(self.n)
+        for t in range(self.n):
+            self.mustar[t] = self.mu[t]/np.sqrt(self.D[t])
+
+    def rstar(self):
+        self.rstar = np.zeros(self.n)
+        for t in range(self.n):
+            if self.N[t] != 0:
+                self.rstar[t] = self.r[t]/np.sqrt(self.N[t])
+
+    def fig8(self):
+        """ 2.8.i """
+        plt.figure()
+        plt.axhline(y=0, color='k', linewidth=0.5)
+        plt.axhline(y=2, color='k', linewidth=0.5, linestyle="--")
+        plt.axhline(y=-2, color='k', linewidth=0.5, linestyle="--")
+        plt.plot(self.x, self.mustar, color="blue", linewidth=0.5)
+        plt.xticks(np.arange(10), self.xYears)
+        plt.xlabel(r'$t$',fontsize=16)
+        plt.title('Observation residual ' + r'$\mu_{t}^{*}$',fontsize=12)
+        plt.draw()
+
+        """ 2.8.ii """
+        plt.figure()
+        plt.hist(self.mustar, 13, density=True, rwidth=0.85)
+        density = gaussian_kde(self.mustar)
+        xs = np.linspace(-4,4,100)
+        plt.plot(xs,density(xs))
+        plt.title('Histogram and estimated density for ' + r'$\mu_{t}^{*}$',fontsize=12)
+        plt.draw()
+
+        """ 2.8.iii """
+        plt.figure()
+        plt.axhline(y=0, color='k', linewidth=0.5)
+        plt.axhline(y=2, color='k', linewidth=0.5, linestyle="--")
+        plt.axhline(y=-2, color='k', linewidth=0.5, linestyle="--")
+        plt.plot(self.x, self.rstar, color="blue", linewidth=0.5)
+        plt.xticks(np.arange(10), self.xYears)
+        plt.xlabel(r'$t$',fontsize=16)
+        plt.title('State residual ' + r'$r_{t}^{*}$',fontsize=12)
+        plt.draw()
+
+        """ 2.8.ii """
+        plt.figure()
+        plt.hist(self.rstar[:-1], 13, density=True, rwidth=0.85)
+        density = gaussian_kde(self.rstar[:-1])
+        xs = np.linspace(-4,4,100)
+        plt.plot(xs,density(xs))
+        plt.title('Histogram and estimated density for ' + r'$r_{t}^{*}$',fontsize=12)
+        plt.draw()
 
 def main():
-    nile = Nile()
+    #nile = Nile()
 
     nile.KalmanFilter()
     #nile.fig1()
@@ -365,15 +458,26 @@ def main():
     nile.DisturbanceSmoother()
     #nile.fig3()
 
-    nile.treatAsMissing()
-    nile.KalmanFilter()
-    nile.KalmanSmoother()
+    #nile.treatAsMissing()
+    #nile.KalmanFilter()
+    #nile.KalmanSmoother()
     #nile.fig5()
 
-    nile.resetY()
-    nile.extendData()
-    nile.KalmanFilter()
-    nile.fig6()
+    #nile.resetY()
+    #nile.extendData()
+    #nile.KalmanFilter()
+    #nile.fig6()
+
+    #nile = Nile()
+    #nile.KalmanFilter()
+    #nile.standardResidual()
+    #nile.fig7()
+
+    #nile.KalmanSmoother()
+    #nile.DisturbanceSmoother()
+    #nile.mustar()
+    #nile.rstar()
+    #nile.fig8()
 
     plt.show()
 
