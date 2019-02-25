@@ -5,6 +5,7 @@ Plots figure 2.1 to 2.3
 import numpy as np
 import math
 import matplotlib.pyplot as plt
+from copy import copy
 
 class Nile:
     def __init__(self):
@@ -17,6 +18,8 @@ class Nile:
 
         for i in range(self.n):
             self.y[i] = int(self.data[i][0])
+
+        self.y = self.y.tolist()
 
         self.vareta = 1469.1
         self.vareps = 15099
@@ -35,14 +38,14 @@ class Nile:
 
             for i in range(self.n):
                 self.y[i] = self.y[i] - meanY
-                
+
         else:
             raise ValueError("The phi you've picked is not within the feasible range!")
-
 
         # initializations Kalman Smoother
         self.rn = 0
         self.Nn = 0
+
         # the label for the x-axis
         self.xYears = ["", 1880, "", 1900, "", 1920, "", 1940, "", 1960]
         self.x = np.linspace(0,10,self.n)
@@ -58,20 +61,24 @@ class Nile:
         self.P[0] = self.P1
 
         for t in range(self.n):
-            self.v[t] = self.y[t] - self.a[t]
-            self.f[t] = self.P[t] + self.vareps
-            self.k[t] = self.T * self.P[t]/self.f[t]
+            if self.y[t] == None :
+                # doesn't really matter
+                self.v[t] = 0
+                self.f[t] = self.P[t] + self.vareps
+                self.k[t] = 0
+            else:
+                self.v[t] = self.y[t] - self.a[t]
+                self.f[t] = self.P[t] + self.vareps
+                self.k[t] = self.T * self.P[t]/self.f[t]
+
             self.a[t+1] = self.T*self.a[t] + self.k[t]*self.v[t]
             self.P[t+1] = (self.T**2) * self.P[t] + self.vareta - (self.k[t]**2) * self.f[t]
-
-        self.a = self.a[1:]
-        self.P = self.P[1:]
 
     def KalmanSmoother(self):
         self.r = np.zeros(self.n)
         self.N = np.zeros(self.n)
-        self.alphahat = np.zeros(self.n)
-        self.V = np.zeros(self.n)
+        self.alphahat = np.zeros(self.n + 1)
+        self.V = np.zeros(self.n + 1)
 
         self.r[self.n - 1] = self.rn
         self.N[self.n - 1] = self.Nn
@@ -81,9 +88,9 @@ class Nile:
             self.N[t - 1] = 1/self.f[t] + self.N[t] * (self.T - self.k[t]) ** 2
 
         for i in range(self.n):
-            t = self.n - 1 - i
+            t = self.n - i
             self.alphahat[t] = self.a[t] + self.P[t] * self.r[t-1]
-            self.V[t] = self.P[t] - (self.P[t] ** 2) * self.N[t]
+            self.V[t] = self.P[t] - (self.P[t] ** 2) * self.N[t-1]
 
     def DisturbanceSmoother(self):
         self.mu = np.zeros(self.n)
@@ -108,11 +115,11 @@ class Nile:
         lowerboundCI = np.zeros(self.n)
         upperboundCI = np.zeros(self.n)
         for i in range(self.n):
-            lowerboundCI[i] = self.a[i] - 1.645*np.sqrt(self.P[i])
-            upperboundCI[i] = self.a[i] + 1.645*np.sqrt(self.P[i])
+            lowerboundCI[i] = self.a[i+1] - 1.645*np.sqrt(self.P[i+1])
+            upperboundCI[i] = self.a[i+1] + 1.645*np.sqrt(self.P[i+1])
 
         plt.figure()
-        plt.plot(self.x, self.a, color="blue", label=r'$\alpha_t$', linewidth=0.5)
+        plt.plot(self.x, self.a[1:], color="blue", label=r'$\alpha_t$', linewidth=0.5)
         plt.plot(self.x, self.y, color="grey", label='Nile data', linewidth=1, alpha=0.3)
         plt.plot(self.x, lowerboundCI, color="red", label='90% Confidence Interval', linewidth=0.5, linestyle="dashed")
         plt.plot(self.x, upperboundCI, color="red", linewidth=0.5, linestyle="dashed")
@@ -124,7 +131,7 @@ class Nile:
 
         """ 2.1.ii """
         plt.figure()
-        plt.plot(self.x, self.P, color="blue", linewidth=0.5)
+        plt.plot(self.x, self.P[1:], color="blue", linewidth=0.5)
         plt.xticks(np.arange(10), self.xYears)
         plt.xlabel(r'$t$',fontsize=16)
         plt.title('Filtered state variance ' + r'$P_t$',fontsize=12)
@@ -143,6 +150,7 @@ class Nile:
         """ 2.1.iv """
         plt.figure()
         plt.axhline(y=0, color='k', linewidth=0.5)
+        plt.ylim(bottom=20000, top=32500)
         plt.plot(self.x, self.f, color="blue", linewidth=0.5)
         plt.xticks(np.arange(10), self.xYears)
         plt.xlabel(r'$t$',fontsize=16)
@@ -154,11 +162,11 @@ class Nile:
         lowerboundCI = np.zeros(self.n)
         upperboundCI = np.zeros(self.n)
         for i in range(self.n):
-            lowerboundCI[i] = self.alphahat[i] - 1.645*np.sqrt(self.V[i])
-            upperboundCI[i] = self.alphahat[i] + 1.645*np.sqrt(self.V[i])
+            lowerboundCI[i] = self.alphahat[i+1] - 1.645*np.sqrt(self.V[i+1])
+            upperboundCI[i] = self.alphahat[i+1] + 1.645*np.sqrt(self.V[i+1])
 
         plt.figure()
-        plt.plot(self.x, self.alphahat, color="blue", label='Smoothed state', linewidth=0.5)
+        plt.plot(self.x, self.alphahat[1:], color="blue", label='Smoothed state', linewidth=0.5)
         plt.plot(self.x, self.y, color="grey", label='Nile data', linewidth=1, alpha=0.3)
         plt.plot(self.x, lowerboundCI, color="red", label='90% Confidence Interval', linewidth=0.5, linestyle="dashed")
         plt.plot(self.x, upperboundCI, color="red", linewidth=0.5, linestyle="dashed")
@@ -171,7 +179,7 @@ class Nile:
         """ 2.2.ii """
         plt.figure()
         plt.ylim(bottom=2000, top=4200)
-        plt.plot(self.x, self.V, color="blue", linewidth=0.5)
+        plt.plot(self.x, self.V[1:], color="blue", linewidth=0.5)
         plt.xticks(np.arange(10), self.xYears)
         plt.xlabel(r'$t$',fontsize=16)
         plt.title('Smoothed state variance ' + r'$V_t$',fontsize=12)
@@ -229,14 +237,144 @@ class Nile:
         plt.title('State error standard error ' + r'$\sqrt{Var(\eta_t | y)}$',fontsize=12)
         plt.draw()
 
+    def treatAsMissing(self):
+        for i in range(20, 40):
+            self.y[i] = int(self.y[i])
+            self.y[i] = None
+        for i in range(60, 80):
+            self.y[i] = int(self.y[i])
+            self.y[i] = None
+
+    def fig5(self):
+        """ 2.5.i """
+        plt.figure()
+        plt.plot(self.x, self.a[1:], color="blue", label=r'$\alpha_t$', linewidth=0.5)
+        plt.plot(self.x, self.y, color="grey", label='Nile data', linewidth=1, alpha=0.3)
+        plt.xticks(np.arange(10), self.xYears)
+        plt.legend(loc='upper right')
+        plt.xlabel(r'$t$',fontsize=16)
+        plt.title('Filtered state ' + r'$\alpha_t$ ' + '(extrapolation)',fontsize=12)
+        plt.draw()
+
+        """ 2.5.ii """
+        plt.figure()
+        plt.plot(self.x, self.P[1:], color="blue", linewidth=0.5)
+        plt.xticks(np.arange(10), self.xYears)
+        plt.xlabel(r'$t$',fontsize=16)
+        plt.title('Filtered state variance ' + r'$P_t$',fontsize=12)
+        plt.draw()
+
+        """ 2.5.iii """
+        plt.figure()
+        plt.plot(self.x, self.alphahat[1:], color="blue", label='Smoothed state', linewidth=0.5)
+        plt.plot(self.x, self.y, color="grey", label='Nile data', linewidth=1, alpha=0.3)
+        plt.xticks(np.arange(10), self.xYears)
+        plt.legend(loc='upper right')
+        plt.xlabel(r'$t$',fontsize=16)
+        plt.title('Smoothed state ' + r'$\hat{\alpha_t}$ ' + '(interpolation)',fontsize=12)
+        plt.draw()
+
+        """ 2.5.iv """
+        plt.figure()
+        plt.ylim(bottom=2000, top=10000)
+        plt.plot(self.x, self.V[1:], color="blue", linewidth=0.5)
+        plt.xticks(np.arange(10), self.xYears)
+        plt.xlabel(r'$t$',fontsize=16)
+        plt.title('Smoothed state variance ' + r'$V_t$',fontsize=12)
+        plt.draw()
+
+    def resetY(self):
+        self.data = [i.strip().split() for i in open("DK-data/Nile.dat").readlines()]
+        self.data.pop(0)
+
+        self.y = np.zeros(len(self.data))
+
+        self.n = len(self.y)
+
+        for i in range(self.n):
+            self.y[i] = int(self.data[i][0])
+
+        self.y = self.y.tolist()
+
+    def extendData(self):
+        for i in range(30):
+            self.y.append(None)
+
+        self.n = len(self.y)
+
+        # relabel for the x-axis
+        self.xYears = ["", 1890, 1910, 1930, 1950, 1970, 1990, 2010]
+        self.x = np.linspace(0,8,self.n)
+
+
+    def fig6(self):
+        """ 2.6.i """
+        lowerboundCI = np.zeros(self.n)
+        upperboundCI = np.zeros(self.n)
+        for i in range(self.n):
+            lowerboundCI[i] = self.a[i+1] - 0.67449*np.sqrt(self.P[i+1])
+            upperboundCI[i] = self.a[i+1] + 0.67449*np.sqrt(self.P[i+1])
+
+        plt.figure()
+        plt.plot(self.x, self.a[1:], color="blue", label=r'$\alpha_t$', linewidth=0.5)
+        plt.plot(self.x, self.y, color="grey", label='Nile data', linewidth=1, alpha=0.3)
+        plt.plot(self.x, lowerboundCI, color="red", label='50% Confidence Interval', linewidth=0.5, linestyle="dashed")
+        plt.plot(self.x, upperboundCI, color="red", linewidth=0.5, linestyle="dashed")
+        plt.xticks(np.arange(8), self.xYears)
+        plt.legend(loc='upper right')
+        plt.xlabel(r'$t$',fontsize=16)
+        plt.title('State forecast' + r'$\alpha_t$ ' + 'and its 50% confidence intervals',fontsize=12)
+        plt.draw()
+
+        """ 2.6.ii """
+        plt.figure()
+        plt.plot(self.x, self.P[1:], color="blue", linewidth=0.5)
+        plt.xticks(np.arange(8), self.xYears)
+        plt.xlabel(r'$t$',fontsize=16)
+        plt.title('State variance ' + r'$P_t$',fontsize=12)
+        plt.draw()
+
+        """ 2.6.iii """
+        plt.figure()
+        plt.plot(self.x, self.a[1:], color="blue", label=r'$\alpha_t$', linewidth=0.5)
+        plt.xticks(np.arange(8), self.xYears)
+        plt.xlabel(r'$t$',fontsize=16)
+        plt.title('Observation forecast' + r'$E(y_t | Y_{t-1})$ ',fontsize=12)
+        plt.draw()
+
+        """ 2.6.iv """
+        plt.figure()
+        plt.axhline(y=0, color='k', linewidth=0.5)
+        plt.ylim(bottom=20000, top=96000)
+        plt.plot(self.x, self.f, color="blue", linewidth=0.5)
+        plt.xticks(np.arange(8), self.xYears)
+        plt.xlabel(r'$t$',fontsize=16)
+        plt.title('Observation forecast variance ' + r'$F_t$',fontsize=12)
+        plt.draw()
+
+
 def main():
     nile = Nile()
+
+    nile.KalmanFilter()
+    #nile.fig1()
+
+    nile.KalmanSmoother()
+    #nile.fig2()
+
+    nile.DisturbanceSmoother()
+    #nile.fig3()
+
+    nile.treatAsMissing()
     nile.KalmanFilter()
     nile.KalmanSmoother()
-    nile.DisturbanceSmoother()
-    nile.fig1()
-    nile.fig2()
-    nile.fig3()
+    #nile.fig5()
+
+    nile.resetY()
+    nile.extendData()
+    nile.KalmanFilter()
+    nile.fig6()
+
     plt.show()
 
 if __name__ == "__main__":
