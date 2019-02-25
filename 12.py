@@ -68,7 +68,7 @@ class Nile:
             if self.y[t] == None :
                 # doesn't really matter
                 self.v[t] = 0
-                self.f[t] = self.P[t] + self.vareps
+                self.f[t] = 10 ** 7
                 self.k[t] = 0
             else:
                 self.v[t] = self.y[t] - self.a[t]
@@ -242,7 +242,7 @@ class Nile:
         plt.draw()
 
     def fig4(self):
-        continue
+        return
 
     def treatAsMissing(self):
         for i in range(20, 40):
@@ -283,7 +283,8 @@ class Nile:
 
         """ 2.5.iv """
         plt.figure()
-        plt.ylim(bottom=2000, top=10000)
+        if self.T == 1:
+            plt.ylim(bottom=2000, top=10000)
         plt.plot(self.x, self.V[1:], color="blue", linewidth=0.5)
         plt.xticks(np.arange(10), self.xYears)
         plt.xlabel(r'$t$',fontsize=16)
@@ -300,6 +301,16 @@ class Nile:
 
         for i in range(self.n):
             self.y[i] = int(self.data[i][0])
+
+        if abs(self.T == 1):
+            self.P1 = 10 ** 7
+        elif abs(self.T < 1):
+            self.P1 = self.vareta/(1 - self.T**2)
+
+            meanY = np.mean(self.y)
+
+            for i in range(self.n):
+                self.y[i] = self.y[i] - meanY
 
         self.y = self.y.tolist()
 
@@ -330,7 +341,7 @@ class Nile:
         plt.xticks(np.arange(14), self.xYears)
         plt.legend(loc='upper right')
         plt.xlabel(r'$t$',fontsize=16)
-        plt.title('State forecast' + r'$\alpha_t$ ' + 'and its 50% confidence intervals',fontsize=12)
+        plt.title('State forecast ' + r'$\alpha_t$ ' + 'and its 50% confidence intervals',fontsize=12)
         plt.draw()
 
         """ 2.6.ii """
@@ -449,13 +460,13 @@ class Nile:
 def main():
     #nile = Nile()
 
-    nile.KalmanFilter()
+    #nile.KalmanFilter()
     #nile.fig1()
 
-    nile.KalmanSmoother()
+    #nile.KalmanSmoother()
     #nile.fig2()
 
-    nile.DisturbanceSmoother()
+    #nile.DisturbanceSmoother()
     #nile.fig3()
 
     #nile.treatAsMissing()
@@ -468,16 +479,16 @@ def main():
     #nile.KalmanFilter()
     #nile.fig6()
 
-    #nile = Nile()
-    #nile.KalmanFilter()
-    #nile.standardResidual()
-    #nile.fig7()
+    nile = Nile()
+    nile.KalmanFilter()
+    nile.standardResidual()
+    nile.fig7()
 
-    #nile.KalmanSmoother()
-    #nile.DisturbanceSmoother()
-    #nile.mustar()
-    #nile.rstar()
-    #nile.fig8()
+    nile.KalmanSmoother()
+    nile.DisturbanceSmoother()
+    nile.mustar()
+    nile.rstar()
+    nile.fig8()
 
     plt.show()
 
