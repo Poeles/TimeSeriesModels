@@ -241,8 +241,32 @@ class Nile:
         plt.title('State error standard error ' + r'$\sqrt{Var(\eta_t | y)}$',fontsize=12)
         plt.draw()
 
+    def simulation(self):
+        epsdot = np.random.normal(0, np.sqrt(self.vareps), self.n)
+        etadot = np.random.normal(0, np.sqrt(self.vareta), self.n)
+
+        self.alphadot = np.zeros(self.n + 1)
+        self.alphadot[0] = np.mean(self.y)
+
+        self.ydot = np.zeros(self.n)
+
+        for t in range(self.n):
+            self.ydot[t] = self.alphadot[t] + epsdot[t]
+            self.alphadot[t + 1] = self.alphadot[t] + etadot[t]
+
     def fig4(self):
-        return
+        """ 2.4.i """
+        plt.figure()
+        plt.plot(self.x, self.alphahat[1:], label=r'$\hat{\alpha}_t$',color="blue", linewidth=0.5)
+        plt.plot(self.x, self.alphadot[1:], label=r'$\alpha_{t}^{(\cdot)}$', color="red", linewidth=0.5)
+        plt.xticks(np.arange(10), self.xYears)
+        plt.legend(loc='upper right')
+        plt.xlabel(r'$t$',fontsize=16)
+        plt.title('Smoothed state ' + r'$\hat{\alpha}_t$ ' + 'and sample ' + r'$\alpha_{t}^{(\cdot)}$',fontsize=12)
+        plt.draw()
+
+        """ 2.4.ii """
+
 
     def treatAsMissing(self):
         for i in range(20, 40):
@@ -458,16 +482,19 @@ class Nile:
         plt.draw()
 
 def main():
-    #nile = Nile()
+    nile = Nile()
 
-    #nile.KalmanFilter()
+    nile.KalmanFilter()
     #nile.fig1()
 
-    #nile.KalmanSmoother()
+    nile.KalmanSmoother()
     #nile.fig2()
 
-    #nile.DisturbanceSmoother()
+    nile.DisturbanceSmoother()
     #nile.fig3()
+
+    nile.simulation()
+    nile.fig4()
 
     #nile.treatAsMissing()
     #nile.KalmanFilter()
@@ -479,16 +506,16 @@ def main():
     #nile.KalmanFilter()
     #nile.fig6()
 
-    nile = Nile()
-    nile.KalmanFilter()
-    nile.standardResidual()
-    nile.fig7()
+    #nile = Nile()
+    #nile.KalmanFilter()
+    #nile.standardResidual()
+    #nile.fig7()
 
-    nile.KalmanSmoother()
-    nile.DisturbanceSmoother()
-    nile.mustar()
-    nile.rstar()
-    nile.fig8()
+    #nile.KalmanSmoother()
+    #nile.DisturbanceSmoother()
+    #nile.mustar()
+    #nile.rstar()
+    #nile.fig8()
 
     plt.show()
 
