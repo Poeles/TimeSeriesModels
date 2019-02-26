@@ -13,6 +13,8 @@ from copy import copy
 
 class Nile:
     def __init__(self):
+        np.random.seed(1)
+
         self.data = [i.strip().split() for i in open("DK-data/Nile.dat").readlines()]
         self.data.pop(0)
 
@@ -54,7 +56,7 @@ class Nile:
         self.xYears = ["", 1880, "", 1900, "", 1920, "", 1940, "", 1960]
         self.x = np.linspace(0,10,self.n)
 
-    def KalmanFilter(self):
+    def KalmanFilter(self, y):
         self.v = np.zeros(self.n)
         self.f = np.zeros(self.n)
         self.k = np.zeros(self.n)
@@ -65,13 +67,13 @@ class Nile:
         self.P[0] = self.P1
 
         for t in range(self.n):
-            if self.y[t] == None :
+            if y[t] == None :
                 # doesn't really matter
                 self.v[t] = 0
                 self.f[t] = 10 ** 7
                 self.k[t] = 0
             else:
-                self.v[t] = self.y[t] - self.a[t]
+                self.v[t] = y[t] - self.a[t]
                 self.f[t] = self.P[t] + self.vareps
                 self.k[t] = self.T * self.P[t]/self.f[t]
 
@@ -242,30 +244,125 @@ class Nile:
         plt.draw()
 
     def simulation(self):
-        epsdot = np.random.normal(0, np.sqrt(self.vareps), self.n)
-        etadot = np.random.normal(0, np.sqrt(self.vareta), self.n)
+        epscross = np.random.normal(0, np.sqrt(self.vareps), self.n)
+        etacross = np.random.normal(0, np.sqrt(self.vareta), self.n)
 
-        self.alphadot = np.zeros(self.n + 1)
-        self.alphadot[0] = np.mean(self.y)
+        self.alphacross = np.zeros(self.n + 1)
 
-        self.ydot = np.zeros(self.n)
+        if self.T == 1:
+            self.alphacross[0] = self.a[1]
+        else:
+            self.alphacross[0] = np.random.normal(0, np.sqrt(self.P1))
+
+        self.ycross = np.zeros(self.n)
 
         for t in range(self.n):
-            self.ydot[t] = self.alphadot[t] + epsdot[t]
-            self.alphadot[t + 1] = self.alphadot[t] + etadot[t]
+            self.ycross[t] = self.alphacross[t] + epscross[t]
+            self.alphacross[t + 1] = self.alphacross[t] + etacross[t]
+
+    def KalmanFilterSim(self, y):
+        self.vsim = np.zeros(self.n)
+        self.fsim = np.zeros(self.n)
+        self.ksim = np.zeros(self.n)
+
+        self.asim = np.zeros(self.n + 1)
+        self.asim[0] = self.a1
+        self.Psim = np.zeros(self.n + 1)
+        self.Psim[0] = self.P1
+
+        for t in range(self.n):
+            if y[t] == None :
+                # doesn't really matter
+                self.vsim[t] = 0
+                self.fsim[t] = 10 ** 7
+                self.ksim[t] = 0
+            else:
+                self.vsim[t] = y[t] - self.asim[t]
+                self.fsim[t] = self.Psim[t] + self.vareps
+                self.ksim[t] = self.T * self.Psim[t]/self.fsim[t]
+
+            self.asim[t+1] = self.T*self.asim[t] + self.ksim[t]*self.vsim[t]
+            self.Psim[t+1] = (self.T**2) * self.Psim[t] + self.vareta - (self.ksim[t]**2) * self.fsim[t]
+
+    def KalmanSmootherSim(self):
+        self.rsim = np.zeros(self.n)
+        self.Nsim = np.zeros(self.n)
+        self.alphahatcross = np.zeros(self.n + 1)
+        self.Vsim = np.zeros(self.n + 1)
+
+        self.rsim[self.n - 1] = self.rn
+        self.Nsim[self.n - 1] = self.Nn
+        for i in range(self.n - 1):
+            t = self.n - 1 - i
+            self.rsim[t - 1] = self.vsim[t]/self.fsim[t] + (self.T - self.ksim[t]) * self.rsim[t]
+            self.Nsim[t - 1] = 1/self.fsim[t] + self.Nsim[t] * (self.T - self.ksim[t]) ** 2
+
+        for i in range(self.n):
+            t = self.n - i
+            self.alphahatcross[t] = self.asim[t] + self.Psim[t] * self.rsim[t-1]
+            self.Vsim[t] = self.Psim[t] - (self.Psim[t] ** 2) * self.Nsim[t-1]
+
+    def alphatilde(self):
+        self.alphatilde = np.zeros(self.n + 1)
+
+        for t in range(self.n):
+            self.alphatilde[t] = self.alphahat[t] + self.alphacross[t] - self.alphahatcross[t]
+
+    def epstilde(self):
+        self.epstilde = np.zeros(self.n)
+
+        for t in range(self.n):
+            self.epstilde[t] = self.y[t] - self.alphatilde[t]
+
+    def etatilde(self):
+        self.etatilde = np.zeros(self.n)
+
+        for t in range(self.n):
+            self.etatilde[t] = self.alphatilde[t+1] - self.alphatilde[t]
 
     def fig4(self):
         """ 2.4.i """
         plt.figure()
         plt.plot(self.x, self.alphahat[1:], label=r'$\hat{\alpha}_t$',color="blue", linewidth=0.5)
-        plt.plot(self.x, self.alphadot[1:], label=r'$\alpha_{t}^{(\cdot)}$', color="red", linewidth=0.5)
+        plt.scatter(self.x, self.alphacross[1:], label=r'$\alpha_{t}^{+}$', color="red", s=10)
         plt.xticks(np.arange(10), self.xYears)
         plt.legend(loc='upper right')
         plt.xlabel(r'$t$',fontsize=16)
-        plt.title('Smoothed state ' + r'$\hat{\alpha}_t$ ' + 'and sample ' + r'$\alpha_{t}^{(\cdot)}$',fontsize=12)
+        plt.title('Smoothed state ' + r'$\hat{\alpha}_t$ ' + 'and sample ' + r'$\alpha_{t}^{+}$',fontsize=12)
         plt.draw()
 
         """ 2.4.ii """
+        plt.figure()
+        plt.plot(self.x, self.alphahat[1:], label=r'$\hat{\alpha}_t$',color="blue", linewidth=0.5)
+        plt.scatter(self.x, self.alphatilde[:-1], label=r'$\widetilde{\alpha}_{t}^{+}$', color="red", s=10)
+        plt.xticks(np.arange(10), self.xYears)
+        plt.legend(loc='upper right')
+        plt.xlabel(r'$t$',fontsize=16)
+        plt.title('Smoothed state ' + r'$\hat{\alpha}_t$ ' + 'and sample ' + r'$\widetilde{\alpha}_{t}^{+}$',fontsize=12)
+        plt.draw()
+
+        """ 2.4.iii """
+        plt.figure()
+        plt.axhline(y=0, color='k', linewidth=0.5)
+        plt.plot(self.x, self.epshat, label=r'$\hat{\epsilon}_t$', color="blue", linewidth=0.5)
+        plt.scatter(self.x, self.epstilde, label= r'$\widetilde{\epsilon}_t$', color="red", s=10)
+        plt.xticks(np.arange(10), self.xYears)
+        plt.legend(loc='upper right')
+        plt.xlabel(r'$t$',fontsize=16)
+        plt.title('Smoothed observation error ' + r'$\hat{\epsilon}_t$ ' + 'and sample ' + r'$\widetilde{\epsilon}_t$',fontsize=12)
+        plt.draw()
+
+        """ 2.4.iv """
+        plt.figure()
+        plt.axhline(y=0, color='k', linewidth=0.5)
+        plt.ylim(bottom=-400, top=200)
+        plt.plot(self.x, self.etahat, label=r'$\hat{\eta}_t$', color="blue", linewidth=0.5)
+        plt.scatter(self.x, self.etatilde, label= r'$\widetilde{\eta}_t$', color="red", s=10)
+        plt.xticks(np.arange(10), self.xYears)
+        plt.legend(loc='upper right')
+        plt.xlabel(r'$t$',fontsize=16)
+        plt.title('Smoothed state error ' + r'$\hat{\eta}_t$ ' + 'and sample ' + r'$\widetilde{\eta}_t$',fontsize=12)
+        plt.draw()
 
 
     def treatAsMissing(self):
@@ -484,34 +581,39 @@ class Nile:
 def main():
     nile = Nile()
 
-    nile.KalmanFilter()
+    nile.KalmanFilter(nile.y)
     #nile.fig1()
 
-    nile.KalmanSmoother()
+    nile.alphahatold = nile.KalmanSmoother()
     #nile.fig2()
 
     nile.DisturbanceSmoother()
     #nile.fig3()
 
     nile.simulation()
-    nile.fig4()
+    nile.KalmanFilterSim(nile.ycross)
+    nile.KalmanSmootherSim()
+    nile.alphatilde()
+    nile.epstilde()
+    nile.etatilde()
+    #nile.fig4()
 
     #nile.treatAsMissing()
-    #nile.KalmanFilter()
+    #nile.KalmanFilter(nile.y)
     #nile.KalmanSmoother()
     #nile.fig5()
 
-    #nile.resetY()
-    #nile.extendData()
-    #nile.KalmanFilter()
-    #nile.fig6()
+    nile.resetY()
+    nile.extendData()
+    nile.KalmanFilter(nile.y)
+    nile.fig6()
 
     #nile = Nile()
-    #nile.KalmanFilter()
+    #nile.KalmanFilter(nile.y)
     #nile.standardResidual()
     #nile.fig7()
 
-    #nile.KalmanSmoother()
+    #nile.KalmanSmoother(nile.y)
     #nile.DisturbanceSmoother()
     #nile.mustar()
     #nile.rstar()
