@@ -120,6 +120,32 @@ class Nile:
 
         return varepshat
 
+    def MLEar1plusnoise(self, params):
+        phi, vareps, vareta = params
+        v = np.zeros(self.n)
+        f = np.zeros(self.n)
+        k = np.zeros(self.n)
+        a = np.zeros(self.n + 1)
+        P = np.zeros(self.n + 1)
+
+        a[0] = 0
+        P[0] = vareta/(1 - phi**2)
+
+        for t in range(self.n):
+            v[t] = self.y[t] - a[t]
+            f[t] = P[t] + vareps
+            k[t] = phi * P[t]/f[t]
+
+            a[t+1] = phi * a[t] + k[t]*v[t]
+            P[t+1] = phi**2 * P[t] + vareta - k[t]**2 * f[t]
+
+        MLE = -(self.n/2)*np.log(2*np.pi)
+
+        for t in range(self.n):
+            MLE += -(1/2) * (np.log(f[t]) + (v[t]**2)/f[t])
+
+        return -MLE
+
     def KalmanFilter(self, y):
         self.v = np.zeros(self.n)
         self.f = np.zeros(self.n)
@@ -322,7 +348,7 @@ class Nile:
 
         for t in range(self.n):
             self.ycross[t] = self.alphacross[t] + epscross[t]
-            self.alphacross[t + 1] = self.alphacross[t] + etacross[t]
+            self.alphacross[t + 1] = self.T * self.alphacross[t] + etacross[t]
 
     def KalmanFilterSim(self, y):
         self.vsim = np.zeros(self.n)
@@ -646,11 +672,23 @@ def main():
     nile = Nile()
 
     """ Compute parameter estimates """
-    bnd = ((1e-6, 10),)
-    qhat = minimize(lambda q: -nile.Ldc(q), 0.0001, bounds=bnd).x[0]
-    nile.vareps = nile.varepshat(qhat)
-    nile.vareta = qhat*nile.vareps
 
+    if nile.T == 1:
+        bnd = ((1e-6, None),)
+        qhat = minimize(lambda q: -nile.Ldc(q), 1e-6, bounds=bnd).x[0]
+        nile.vareps = nile.varepshat(qhat)
+        nile.vareta = qhat*nile.vareps
+
+        print("Estimated through MLE")
+        print("vareps: {}, vareta: {}".format(nile.vareps, nile.vareta))
+    else:
+        bnd = ((-0.99999, 0.99999),(1e-6, None), (1e-6, None))
+        estimates = minimize(nile.MLEar1plusnoise, (0, 1e-6, 1e-6), bounds=bnd).x
+
+        [nile.T, nile.vareps, nile.vareta] = estimates
+
+        print("Estimated through MLE")
+        print("phi: {}, vareps: {}, vareta: {}".format(nile.T, nile.vareps, nile.vareta))
     nile.KalmanFilter(nile.y)
     #nile.fig1()
 
@@ -666,27 +704,27 @@ def main():
     nile.alphatilde()
     nile.epstilde()
     nile.etatilde()
-    #nile.fig4()
+    nile.fig4()
 
-    #nile.treatAsMissing()
-    #nile.KalmanFilter(nile.y)
-    #nile.KalmanSmoother()
+    nile.treatAsMissing()
+    nile.KalmanFilter(nile.y)
+    nile.KalmanSmoother()
     #nile.fig5()
 
     nile.resetY()
     nile.extendData()
     nile.KalmanFilter(nile.y)
-    nile.fig6()
+    #nile.fig6()
 
-    #nile = Nile()
-    #nile.KalmanFilter(nile.y)
-    #nile.standardResidual()
+    nile = Nile()
+    nile.KalmanFilter(nile.y)
+    nile.standardResidual()
     #nile.fig7()
 
-    #nile.KalmanSmoother(nile.y)
-    #nile.DisturbanceSmoother()
-    #nile.mustar()
-    #nile.rstar()
+    nile.KalmanSmoother()
+    nile.DisturbanceSmoother()
+    nile.mustar()
+    nile.rstar()
     #nile.fig8()
 
     plt.show()

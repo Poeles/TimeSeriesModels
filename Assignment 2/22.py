@@ -1,6 +1,11 @@
 import numpy as np
 import math
+from scipy.stats import gaussian_kde
+from scipy.stats import kurtosis
+from scipy.stats import skew
 from scipy.optimize import minimize
+import seaborn as sns
+import statsmodels.api as sm
 import matplotlib.pyplot as plt
 
 class LocalLevel:
@@ -18,6 +23,8 @@ class LocalLevel:
 
         self.data = [i.strip().split() for i in open("DK-data/Nile.dat").readlines()]
         self.data.pop(0)
+
+        self.x = np.linspace(0,10,self.n)
 
     def mu(self):
         mu1 = np.random.normal(self.a1, math.sqrt(self.p1))
@@ -112,6 +119,56 @@ class LocalLevel:
 
         return varepshat
 
+    def histogram(self, vareps, vareta):
+        plt.figure()
+        plt.hist(vareps, 20, rwidth=0.85)
+        plt.title('Histogram for ' + r'$\hat{\sigma}_{\varepsilon}^{2}$ ' + \
+        ' with ' + r'$\sigma_{\varepsilon}^{2}$ = ' + str(self.vareps) + ', T = ' + str(self.Tsize),fontsize=12)
+        plt.draw()
+
+        plt.figure()
+        plt.hist(vareta, 20, rwidth=0.85)
+        plt.title('Histogram for ' + r'$\hat{\sigma}_{\eta}^{2}$ ' + \
+        ' with ' + r'$\sigma_{\eta}^{2}$ = ' + str(self.vareta) + ', T = ' + str(self.Tsize),fontsize=12)
+        plt.draw()
+
+    def bias(self, vareps, vareta):
+
+        for i in range(self.n):
+            vareps[i] = vareps[i] - self.vareps
+            vareta[i] = vareta[i] - self.vareta
+
+        plt.figure()
+        plt.ylim(bottom=-self.vareps, top=self.vareps)
+        plt.plot(self.x, vareps, color="blue", linewidth=0.5)
+        plt.axhline(y=0, color='k', linewidth=0.5)
+        plt.xlabel(r'$i$',fontsize=16)
+        plt.title('Bias of ' + r'$\hat{\sigma}_{\varepsilon}^{2}$' + \
+        ' with ' + r'$\sigma_{\varepsilon}^{2}$ = ' + str(self.vareps) + ', T = ' + str(self.Tsize),fontsize=12)
+        plt.draw()
+
+        plt.figure()
+        plt.ylim(bottom=-self.vareta, top=10*self.vareta)
+        plt.plot(self.x, vareta, color="blue", linewidth=0.5)
+        plt.axhline(y=0, color='k', linewidth=0.5)
+        plt.xlabel(r'$i$',fontsize=16)
+        plt.title('Bias of ' + r'$\hat{\sigma}_{\eta}^{2}$ ' + \
+        ' with ' + r'$\sigma_{\eta}^{2}$ = ' + str(self.vareta) + ', T = ' + str(self.Tsize),fontsize=12)
+        plt.draw()
+
+    def samplevariance(self, vareps, vareta):
+        samplevareps = np.var(vareps, ddof=1)
+        samplevareta = np.var(vareta, ddof=1)
+
+        print("Sample variance of vareps: {}".format(samplevareps))
+        print("Sample variance of vareta: {}".format(samplevareta))
+
+    def skewnessKurtosis(self, vareps, vareta):
+        print('Skewness of vareps: {}'.format(skew(vareps)))
+        print('Skewness of vareta: {}'.format(skew(vareta)))
+        print('Kurtosis of vareps: {}'.format(kurtosis(vareps)))
+        print('Kurtosis of vareta: {}'.format(kurtosis(vareta)))
+
 
 def main():
     localLevel = LocalLevel()
@@ -119,17 +176,23 @@ def main():
     y, mu = localLevel.sim()
 
     # vareps, q
-    varepshat = [0 for i in range(localLevel.n)]
-    varetahat = [0 for i in range(localLevel.n)]
-    qhat = [0 for i in range(localLevel.n)]
-    bnd = ((1e-6, 10),)
+    varepshat = np.zeros(localLevel.n)
+    varetahat = np.zeros(localLevel.n)
+    qhat = np.zeros(localLevel.n)
+    bnd = ((1e-6, None),)
 
     for i in range(localLevel.n):
-        qhat[i] = minimize(lambda q: -localLevel.Ldc(y[i], q), 0.0001, bounds=bnd).x[0]
+        qhat[i] = minimize(lambda q: -localLevel.Ldc(y[i], q), 1e-6, bounds=bnd).x[0]
         varepshat[i] = localLevel.varepshat(y[i], qhat[i])
         varetahat[i] = qhat[i]*varepshat[i]
 
-        print("varepshat: {}, varetahat: {}".format(varepshat[i], varetahat[i]))
+    print("AVG vareps: {}, AVG vareta: {}".format(np.mean(varepshat), np.mean(varetahat)))
+
+    localLevel.histogram(varepshat, varetahat)
+    #localLevel.bias(varepshat, varetahat)
+    #localLevel.samplevariance(varepshat, varetahat)
+    #localLevel.skewnessKurtosis(varepshat, varetahat)
+    plt.show()
 
 
 if __name__ == "__main__":
