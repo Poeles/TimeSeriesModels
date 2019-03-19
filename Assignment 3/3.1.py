@@ -1,10 +1,6 @@
 import numpy as np
 import math
 import matplotlib.pyplot as plt
-<<<<<<< HEAD
-=======
-import
->>>>>>> 33d6fc7fd1371924788a94faf15bf94fcb41f8ce
 
 def readData(dir):
     data = np.loadtxt(dir, dtype=np.float32, skiprows=1)
@@ -28,12 +24,7 @@ sv_dat = readData("Assignment 3/sv.dat")
 dataStats(sv_dat, 'returns')
 
 # b)
-<<<<<<< HEAD
 xt = np.log((sv_dat - (np.mean(sv_dat)))**2)
 dataStats(xt, 'Log squared demeaned returns')
-=======
-xt = np.log(sv_dat**2)
-dataStats(xt, 'Log squared returns')
->>>>>>> 33d6fc7fd1371924788a94faf15bf94fcb41f8ce
 
 # c)
