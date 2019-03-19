@@ -1,7 +1,7 @@
 import numpy as np
 import math
 import matplotlib.pyplot as plt
-
+import
 
 def readData(dir):
     dir = "Assignment 3/sv.dat"
@@ -27,3 +27,5 @@ dataStats(sv_dat, 'returns')
 # b)
 xt = np.log(sv_dat**2)
 dataStats(xt, 'Log squared returns')
+
+# c)
